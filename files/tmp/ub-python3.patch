@@ -1,0 +1,26 @@
+diff --git a/GAMs/PyGAM/Makefile.inc b/GAMs/PyGAM/Makefile.inc
+index 7b6647c..b5ab389 100644
+--- a/GAMs/PyGAM/Makefile.inc
++++ b/GAMs/PyGAM/Makefile.inc
+@@ -49,17 +49,17 @@ CPPFLAGS += -Wno-unused-function
+ ####THE FOLLOWING DEFINITIONS MUST BE CHANGED IN ORDER TO ADAPT 
+ ####TO THE INSTALLED PYTHON (>=3.7)
+ # Python header file folder
+-INCLUDES += -I/usr/include/python3.6m/
+-INCLUDES += -I/usr/lib/python3/dist-packages/numpy/core/include/
++INCLUDES += -I/usr/include/python3.7m/
++INCLUDES += -I/usr/local/lib/python3.7/dist-packages/numpy/core/include/numpy/
+ # Python interpreter folder
+-PYINTERPRETER = /usr/lib/arm-linux-gnueabihf/
++PYINTERPRETER = /usr/lib/python3.7/
+ 
+ ###############################################################
+ 
+ 
+ 
+ # Linker flags requested by python3.7-config
+-LIBRARIES += -L$(PYINTERPRETER) -lpython3.6m -lutil -Xlinker -export-dynamic
++LIBRARIES += -L$(PYINTERPRETER) -lpython3.7m -lutil -Xlinker -export-dynamic
+ 
+ all: $(OBJS) $(SUBPROJ) \
+ 	$(BUILD_DIR)/PyGAM$(DLLEXT)

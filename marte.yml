@@ -1,0 +1,219 @@
+---
+
+- hosts: all
+  become: yes
+  environment:
+    MARTe2_DIR: /opt/MARTe2/MARTe2
+    MARTe2_Components_DIR: /opt/MARTe2/MARTe2-components
+    MARTE_DIR: /opt/MARTe2/MARTe2-MDSplus/Startup
+    MDSPLUS_DIR: /usr/local/mdsplus
+
+  vars_prompt:
+  - name: "mdsiphost"
+    prompt: "Hostname for mdsplus server"
+    private: no
+
+  tasks:
+  - name: "Install aptitude"
+    apt:
+      name: "aptitude"
+      state: present
+      force_apt_get: yes
+
+  - name: "Update all packages"
+    apt:
+      name: "*"
+      state: latest
+
+  - name: "Install software"
+    become: yes
+    apt:
+      update_cache: yes
+      name:
+      - apt-file
+      - rsync 
+      - reprepro 
+      - wget 
+      - git 
+      - automake 
+      - make 
+      - tar
+      - g++ 
+      - gfortran 
+      - openjdk-8-jdk
+      - python-dev 
+      - python-setuptools 
+      - python-numpy 
+      - python-pip
+      - libpython3.7 
+      - libpython3.7-dev 
+      - libpython3.7-stdlib 
+      - python3.7 
+      - python3.7-dev 
+      - python3-dev 
+      - python3-setuptools 
+      - python3-numpy 
+      - python3-pip
+      - openssh-server
+      - gdb 
+      - gdbserver
+      - libasan0 
+      - libtsan0 
+      - valgrind
+      - libtest-harness-perl
+      - libcurl4-gnutls-dev 
+      - libreadline-dev
+      - libdc1394-22-dev 
+      - libraw1394-dev
+      - libxml2-dev 
+      - freetds-dev
+      - libmotif-dev 
+      - libxt-dev 
+      - x11proto-print-dev
+      - libglobus-xio-gsi-driver-dev
+      - libncurses5-dev
+      - libncursesw5-dev
+      - libgtest-dev
+      - cmake
+      - curl
+      - vim
+      - flex
+      - bison
+      - gperf
+      - gnupg
+      - xinetd
+
+  - name: "Configure the MDSplus key (apt)"
+    apt_key:
+      url: "http://www.mdsplus.org/dist/mdsplus.gpg.key"
+      state: present
+
+  - name: "Configure the MDSplus-alpha repository (apt)"
+    apt_repository:
+      repo: "deb http://www.mdsplus.org/dist/Ubuntu18/repo MDSplus alpha"
+      state: present
+
+  - name: "Ensure required mdsplus packages are installed (apt)"
+    apt:
+      name:
+      - mdsplus-alpha
+      - mdsplus-alpha-kernel
+      - mdsplus-alpha-kernel-bin
+      - mdsplus-alpha-rfxdevices
+      - mdsplus-alpha-motif
+      - mdsplus-alpha-motif-bin
+      - mdsplus-alpha-python
+      - mdsplus-alpha-java
+      - mdsplus-alpha-java-bin
+      - mdsplus-alpha-devel
+      state: present
+      update_cache: yes
+    register: mdsplus_install
+
+  - name: "Ensure mdsplus-* packages are up to date (apt)"
+    apt:
+      name: "mdsplus-*"
+      state: latest
+      update_cache: yes
+      only_upgrade: yes
+    register: mdsplus_update
+
+  - name: "Make sure /opt/MARTe2 exists"
+    become: yes
+    file:
+      dest: "/opt/MARTe2"
+      state: directory
+
+  - name: Git checkout MARTe2
+    ansible.builtin.git:
+      repo: 'https://github.com/aneto0/MARTe2.git'
+      dest: /opt/MARTe2/MARTe2
+      version: develop
+
+  - name: Git checkout MARTe2-components
+    ansible.builtin.git:
+      repo: 'https://github.com/aneto0/MARTe2-components.git'
+      dest: /opt/MARTe2/MARTe2-components
+      version: develop
+
+  - name: Git checkout MARTe2-MDSplus
+    ansible.builtin.git:
+      repo: 'https://github.com/MDSplus/MARTe2-MDSplus.git'
+      dest: /opt/MARTe2/MARTe2-MDSplus
+      version: develop
+
+  - name: "Make sure /usr/local/mdsplus/local exists"
+    become: yes
+    file:
+      dest: "/usr/local/mdsplus/local"
+      state: directory
+
+  - name: "envsyms to /usr/local/mdsplus/local"
+    become: yes
+    copy:
+      src: "usr/local/mdsplus/local/envsyms"
+      dest: "/usr/local/mdsplus/local/envsyms"
+
+  - name: "add default_tree_path to envsyms"
+    lineinfile:
+      path: /usr/local/mdsplus/local/envsyms
+      line: "default_tree_path {{ mdsiphost }}/~t::"
+
+  - name: "build MARTe2"
+    make:
+      chdir: "/opt/MARTe2/MARTe2"
+      file:  "Makefile.linux"
+
+  - name: "build MARTe2-components"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-components"
+      file:  "Makefile.x86-linux"
+    ignore_errors: yes
+
+  - name: "Make MDSReaderNS Gam"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/DataSources/MDSReaderNS"
+      file:  "Makefile.linux"
+
+  - name: "Make SWTrig GAM"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/DataSources/SWTrig"
+      file:  "Makefile.linux"
+
+  - name: "Make sure /tmp/ub-python3.patch exists"
+    become: yes
+    copy:
+      src: "tmp/ub-python3.patch"
+      dest: "/tmp/ub-python3.patch"
+
+  - name: "Patch Python location and libraries for UB"
+    shell: patch -i /tmp/ub-python3.patch /opt/MARTe2/MARTe2-MDSplus/GAMs/PyGAM/Makefile.inc
+
+  - name: "Copy in patch-playground.patch"
+    copy:
+      src: "tmp/patch-playground.patch"
+      dest: "/tmp/patch-playground.patch"
+
+  - name: "Patch Playground.cpp to fix compiler problem" 
+    shell: patch -i /tmp/patch-playground.patch /opt/MARTe2/MARTe2-MDSplus/Startup/Playground.cpp
+
+  - name: "Make PyGAM GAM"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/GAMs/PyGAM"
+      file:  "Makefile.linux"
+
+  - name: "Make startup"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/Startup"
+      file:  "Makefile.linux"
+
+  - name: "Make StreamIn GAM"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/DataSources/StreamIn"
+      file:  "Makefile.linux"
+
+  - name: "Make StreamOut GAM"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/DataSources/StreamOut"
+      file:  "Makefile.linux"
+
