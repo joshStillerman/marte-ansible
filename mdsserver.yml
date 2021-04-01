@@ -335,7 +335,7 @@
     apt:
       name: nodejs
       update_cache: yes
-      only_upgrade: yes
+      state: present
     register: node_update
 
   - name: install yarn globally
