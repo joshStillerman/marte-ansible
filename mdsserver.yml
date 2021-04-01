@@ -116,6 +116,7 @@
       - python3-future
       - scalapack-doc
       - screen
+      - software-properties-common 
       - sshpass
       - tcsh
       - tmux
@@ -124,6 +125,7 @@
       - vim
       - virtualenv
       - vlc
+      - wget
       - xinetd
       - python-gi-cairo
       - python3-gi-cairo
@@ -273,37 +275,83 @@
       only_upgrade: yes
     register: mdsplus_update
 
+  - name: "add the grafana gpg.key"
+    apt_key:
+      url: https://packages.grafana.com/gpg.key 
+      state: present 
+
+  - name: "Configure the grafana repository (apt)"
+    apt_repository:
+      repo: "deb https://packages.grafana.com/oss/deb stable main"
+      state: present
+    
+  - name: "Ensure required grafana packages are installed (apt)"
+    apt:
+      name:
+      - grafana
+      state: present
+      update_cache: yes
+    register: grafana_install
+
+  - name: "Ensure grafana packages are up to date (apt)"
+    apt:
+      name: "grafana"
+      state: latest
+      update_cache: yes
+      only_upgrade: yes
+    register: grafana_update
+
+  - name: make sure the mdsip grafana plugin is there
+    unarchive:
+      src: tmp/grafana-mdsip.tgz
+      dest: /var/lib/grafana/plugins
+      remote_src: no
+
+  - name: make sure the streams grafana plugin is there
+    unarchive:
+      src: tmp/grafana-streams.tgz
+      dest: /var/lib/grafana/plugins
+      remote_src: no
+
+  - name: get the nodesource ppa for node Version 14
+    get_url:
+      url: https://deb.nodesource.com/setup_14.x
+      dest: /tmp/nodesource_setup.sh
+      mode: '0440'
+
+  - name: run the nodesource_setup file we just got
+    shell:  'cd /tmp; bash nodesource_setup.sh'
+
+  - name: install nodejs V14
+    apt:
+      name: nodejs
+      update_cache: yes
+      only_upgrade: yes
+    register: node_update
+
+  - name: install yarn globally
+    shell: 'npm install --global yarn'
+
+  - name: build the mdsip grafana plugin
+    shell: "cd /var/lib/grafana/plugins/mdsip; yarn install"
+
+  - name: build the streams grafana plugin
+    shell: "cd /var/lib/grafana/plugins/streams; yarn install"
+
+  - name: enable service grafana-server and ensure it is not masked
+    systemd:
+      name: grafana-server
+      daemon_reload: yes
+      enabled: yes
+      state: started
+      masked: no
+
   - name: "Configure /etc/bashrc.bash"
     lineinfile:
       insertbefore: BOF
       line: ". /usr/local/mdsplus/setup.sh"
       path: "/etc/bash.bashrc"
       state: present
-
-#  - name: "Copy mdsip systemd service files to /etc"
-#    become: yes
-#    copy:
-#      src: "{{ item }}"
-#      dest: "/etc/systemd/system/{{ item | basename }}"
-#    with_fileglob:
-#      - "etc/systemd/system/*.service"
-#
-#  - name: "Enable mdsip services"
-#    become: yes
-#    systemd:
-#      name: "{{ item | basename }}"
-#      enabled: yes
-#    with_fileglob:
-#      - "etc/systemd/system/*.service"
-#
-#  - name: "Start mdsip services"
-#    become: yes
-#    systemd:
-#      name: "{{ item | basename }}"
-#      state: started
-#    with_fileglob:
-#      - "etc/systemd/system/*.service"
-#
 
   - name: "Configure /etc/bashrc.bash"
     become: yes
