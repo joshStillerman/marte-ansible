@@ -1,2 +1,9 @@
 [all]
 ubuntu
+mdsserver
+
+[marte]
+ubuntu
+
+[mdsplus]
+mdsserver
