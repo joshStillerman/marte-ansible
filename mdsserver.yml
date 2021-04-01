@@ -189,6 +189,24 @@
       name: mdsplus 
       state: present
 
+  - name: "Ensure /var/log/mdsplus exists"
+    become: yes
+    file:
+      dest: "/var/log/mdsplus"
+      owner: mdsplus
+      group: mdsplus
+      mode: u=rwx,g=rx,o=rx
+      state: directory
+
+  - name: "Ensure /var/log/mdsplus/mdsipd exists"
+    become: yes
+    file:
+      dest: "/var/log/mdsplus/mdsipd"
+      owner: mdsplus
+      group: mdsplus
+      mode: u=rwx,g=rx,o=rx
+      state: directory
+  
   - name: "Ensure /trees exists"
     become: yes
     file:
@@ -340,6 +358,23 @@
 
   - name: install yarn globally
     shell: 'npm install --global yarn'
+
+  - name: make sure mdsplus/node has websocket
+    shell: 'cd /usr/local/mdsplus/node; yarn add websocket'
+
+  - name: make sure the service file for mds-bridge  is in /etc/systemd
+    copy:
+      src: etc/systemd/system/mds-bridge.service
+      dest: /etc/systemd/system/mds-bridge.service
+      mode: u=rwx,g=rx,o=rx
+
+  - name: enable and start the mds-bridge service
+    systemd:
+      name: mds-bridge
+      daemon_reload: yes
+      enabled: yes
+      state: started
+      masked: no
 
   - name: build the mdsip grafana plugin
     shell: "cd /var/lib/grafana/plugins/mdsip; yarn install"

@@ -1,0 +1,15 @@
+[Unit]
+Description=mdsip_analysis server
+After=network.target
+
+[Service]
+WorkingDirectory=/usr/local/mdsplus/node
+Type=simple
+User=mdsplus
+LimitCORE=1000000
+ExecStart=/usr/bin/node mds-bridge.js
+Restart=on-failure
+
+[Install]
+WantedBy=network-online.target
+

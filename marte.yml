@@ -163,7 +163,7 @@
   - name: "add default_tree_path to envsyms"
     lineinfile:
       path: /usr/local/mdsplus/local/envsyms
-      line: "default_tree_path {{ mdsiphost }}/~t::"
+      line: "default_tree_path {{ mdsiphost }}::"
 
   - name: "build MARTe2"
     make:
