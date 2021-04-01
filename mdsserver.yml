@@ -301,6 +301,15 @@
       only_upgrade: yes
     register: grafana_update
 
+  - name: "Ensure /var/lib/grafana/plugins exists"
+    become: yes
+    file:
+      dest: "/var/lib/grafana/plugins"
+      owner: root
+      group: root
+      mode: u=rwx,g=rx,o=rx
+      state: directory
+
   - name: make sure the mdsip grafana plugin is there
     unarchive:
       src: tmp/grafana-mdsip.tgz
