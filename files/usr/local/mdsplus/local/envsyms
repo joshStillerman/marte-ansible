@@ -1,3 +1,4 @@
 MARTe2_DIR                   /opt/MARTe2/MARTe2
 MARTe2_Components_DIR        /opt/MARTe2/MARTe2-components
 MARTE_DIR                    /opt/MARTe2/MARTe2-MDSplus/Startup
+MATLAB_DIR		     /opt/R2021a

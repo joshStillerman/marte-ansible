@@ -216,43 +216,11 @@
       mode: u=rwx,g=rx,o=rx
       state: directory
 
-  - name: "Ensure /trees/new exists"
-    become: yes
-    file:
-      dest: "/trees/new"
-      owner: root
-      group: root
-      mode: u=rwx,g=rx,o=rx
-      state: directory
-
-  - name: "Ensure /trees/new/bagel exists"
-    become: yes
-    file:
-      dest: "/tokzone/trees/new/bagel"
-      owner: mdsplus
-      group: mdsplus-data
-      mode: u=rwx,g=rwx,o=rx
-      state: directory
-      recurse: yes
-
-  - name: "Ensure /trees/models exists"
-    become: yes
-    file:
-      dest: "/trees/models"
-      owner: root
-      group: root
-      mode: u=rwx,g=rx,o=rx
-      state: directory
-
-  - name: "Ensure /trees/models/bagel exists"
-    become: yes
-    file:
-      dest: "/trees/models/bagel"
-      owner: mdsplus
-      group: mdsplus-data
-      mode: u=rwx,g=rwx,o=rx
-      state: directory
-      recurse: yes
+  - name: Put the sample tree in place 
+    unarchive:
+      src: tmp/bagel-trees.tgz
+      dest: /trees
+      remote_src: no
 
   - name: "Configure the MDSplus key (apt)"
     apt_key:
@@ -292,6 +260,24 @@
       update_cache: yes
       only_upgrade: yes
     register: mdsplus_update
+
+  - name: make sure /opt/scripts exists
+    become: yes
+    file:
+      dest: "/opt/scripts"
+      owner: mdsplus
+      group: mdsplus
+      mode: u=rwx,g=rwx,o=rwx
+      state: directory
+
+  - name: copy the tester program into /opt/scripts
+    copy:
+      src: opt/scripts/tester.cpp
+      dest: /opt/scripts/tester.cpp
+      mode: u=rwx,g=rwx,o=rwx
+
+  - name: build the tester program
+    shell: 'cd /opt/scripts; c++ tester.cpp -o tester -I/usr/local/mdsplus/include -L/usr/local/mdsplus/lib -l MdsObjectsCppShr -lev'
 
   - name: "add the grafana gpg.key"
     apt_key:
@@ -367,6 +353,21 @@
       src: etc/systemd/system/mds-bridge.service
       dest: /etc/systemd/system/mds-bridge.service
       mode: u=rwx,g=rx,o=rx
+
+  - name: "Configure /usr/local/mdsplus/nodejs/mds-bridge.json for debug=0"
+    lineinfile:
+      regexp: '^    "debug" :'
+      line: '    "debug" :  0,'
+
+  - name: "Make sure /tmp/mds-bridge.js.patch exists"
+    become: yes
+    copy:
+      src: "tmp/mds-bridge.js.patch"
+      dest: "/tmp/mds-bridge.js.patch"
+
+  - name: "Patch mds-bridge.js so it is not so verbose"
+    shell: patch -i /tmp/mds-bridge.js.patch /usr/local/mdsplus/nodejs/mds-bridge.js
+    ignore_errors: yes
 
   - name: enable and start the mds-bridge service
     systemd:

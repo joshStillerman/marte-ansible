@@ -36,10 +36,12 @@
       - wget 
       - git 
       - automake 
+      - htop
       - make 
       - tar
       - g++ 
       - gfortran 
+      - net-tools
       - openjdk-8-jdk
       - python-dev 
       - python-setuptools 
@@ -118,6 +120,15 @@
       only_upgrade: yes
     register: mdsplus_update
 
+  - name: "bagelController0.so to /usr/local/mdsplus/lib"
+    become: yes
+    copy:
+      src: "usr/local/mdsplus/lib/bagelController0.so"
+      dest: "/usr/local/mdsplus/lib/bagelController0.so"
+
+  - name: "run the mdsplus python installers"
+    shell: 'cd /usr/local/mdsplus/python/MDSplus; python setup.py install; python3 setup.py install'
+
   - name: "Make sure /opt/MARTe2 exists"
     become: yes
     file:
@@ -169,6 +180,12 @@
     make:
       chdir: "/opt/MARTe2/MARTe2"
       file:  "Makefile.linux"
+
+  - name: copy all the matlab includes to /opt/R2021a
+    unarchive:
+      src: tmp/MATLAB-R2021a.tgz
+      dest: /opt
+      remote_src: no
 
   - name: "build MARTe2-components"
     make:
@@ -235,4 +252,20 @@
 
   - name: "copy rtw_capi_wrapper.so to /usr/local/mdsplus"
     shell: "cp /opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGAM/rtw_capi_wrapper.so /usr/local/mdsplus/lib/" 
+
+  - name: "Make sure /opt/scripts exists"
+    become: yes
+    file:
+      dest: "/opt/scripts"
+      state: directory
+      mode: u=rwx,g=rwx,o=rwx,a=rwx
+
+  - name: copy the scripts into the scripts directory
+    become: yes
+    copy:
+      src: "{{ item }}"
+      dest: "/opt/scripts/{{ item | basename }}"
+      mode: u=rwx,g=rx,o=rx
+    with_fileglob:
+      - "opt/scripts/*"
 

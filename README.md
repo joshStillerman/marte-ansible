@@ -3,6 +3,9 @@
   - make a ub machine and install ssh on it
   - on your host computer pip install ansible
   - then clone this repo
+  - log in to 1st machine  and change hostname to marte
+    sudo echo "marte" > /etc/hostname
+  - log in to 2nd machine and change its hostname to mdsserver
   - my VM ended up with a host name ubuntu on my network. if yours did not edit the file hosts in the repo
   - `ansible-playbook -v marte.yml`
     — provide your password for the UB machine
@@ -42,14 +45,14 @@
 - or make a VM to host mdsplus
   - create a UB machine
   - change its hostname to mdsserver
-    - echo mdsserver > /etc/hostname
+    - `echo mdsserver > /etc/hostname`
   - install openssh-server `sudo apt-get install openssh-server`
   - ansible-playbook -v mdsserver.yml
     - provide your password
     - hit return to use same pw for sudo
   - ssh to the machine and make your tree
     - ssh -Y mdsserver
-  - create the bagel tree
+  - create the bagel tree  * this is done for you *
    -
    ```
    mdstcl
@@ -62,5 +65,5 @@
    TCL> close
    TCL> exit
    ```
- - now use jTraverser2 to set up the devices.
+ - now use jTraverser2 to set up the devices. * this is done for you *
 
