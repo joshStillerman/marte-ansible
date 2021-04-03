@@ -80,6 +80,7 @@
       - libcanberra-gtk-module
       - libcppunit-dev
       - libdevmapper-event1.02.1
+      - libev-dev
       - libfftw3-dev
       - libfltk-gl1.3
       - libfltk1.3
@@ -236,6 +237,7 @@
     apt:
       name:
       - mdsplus-alpha
+      - mdsplus-alpha-devel
       - mdsplus-alpha-kernel
       - mdsplus-alpha-kernel-bin
       - mdsplus-alpha-mitdevices
@@ -356,18 +358,15 @@
 
   - name: "Configure /usr/local/mdsplus/nodejs/mds-bridge.json for debug=0"
     lineinfile:
+      path: /usr/local/mdsplus/nodejs/mds-bridge.json
       regexp: '^    "debug" :'
       line: '    "debug" :  0,'
 
-  - name: "Make sure /tmp/mds-bridge.js.patch exists"
-    become: yes
-    copy:
-      src: "tmp/mds-bridge.js.patch"
-      dest: "/tmp/mds-bridge.js.patch"
-
-  - name: "Patch mds-bridge.js so it is not so verbose"
-    shell: patch -i /tmp/mds-bridge.js.patch /usr/local/mdsplus/nodejs/mds-bridge.js
-    ignore_errors: yes
+  - name: "remove 1 debug print from /usr/local/mdsplus/nodejs/mds-bridge.js "
+    lineinfile:
+      path: /usr/local/mdsplus/nodejs/mds-bridge.js
+      regexp: '    console.log(configObj);'
+      line: '    if (debug >= 1) console.log(configObj);'
 
   - name: enable and start the mds-bridge service
     systemd:

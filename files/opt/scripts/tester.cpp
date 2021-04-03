@@ -6,6 +6,7 @@
 #undef NDEBUG
 #include <mdsobjects.h>
 #endif
+#include <mdsobjects.h>
 //#include "VL6180XSet.h"
 #include <sched.h>
 #include <sys/resource.h>
