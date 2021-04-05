@@ -377,6 +377,9 @@
   - name: do a yarn install to get the node modules for mds-bridge
     shell: 'cd /usr/local/mdsplus/nodejs; yarn install'
 
+  - name: do a yarn add websocket
+    shell: 'cd /usr/local/mdsplus/nodejs; yarn add websocket'
+
   - name: enable the mds-bridge service
     systemd:
       name: mds-bridge
