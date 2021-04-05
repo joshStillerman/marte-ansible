@@ -374,6 +374,9 @@
       regexp: '    console.log(configObj);'
       line: '    if (debug >= 1) console.log(configObj);'
 
+  - name: do a yarn install to get the node modules for mds-bridge
+    shell: 'cd /usr/local/mdsplus/nodejs; yarn install'
+
   - name: enable the mds-bridge service
     systemd:
       name: mds-bridge
