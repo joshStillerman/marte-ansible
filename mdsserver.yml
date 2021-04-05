@@ -278,6 +278,12 @@
       dest: /opt/scripts/tester.cpp
       mode: u=rwx,g=rwx,o=rwx
 
+  - name: copy the test ramp generator to /opt/scripts
+    copy:
+      src: opt/scripts/ramps.py
+      dest: /opt/scripts/ramps.py
+      mode: u=rwx,g=rwx,o=rwx
+
   - name: build the tester program
     shell: 'cd /opt/scripts; c++ tester.cpp -o tester -I/usr/local/mdsplus/include -L/usr/local/mdsplus/lib -l MdsObjectsCppShr -lev'
 
@@ -368,11 +374,17 @@
       regexp: '    console.log(configObj);'
       line: '    if (debug >= 1) console.log(configObj);'
 
-  - name: enable and start the mds-bridge service
+  - name: enable the mds-bridge service
     systemd:
       name: mds-bridge
       daemon_reload: yes
       enabled: yes
+      state: started
+      masked: no
+
+  - name: start the mds-bridge service
+    systemd:
+      name: mds-bridge
       state: started
       masked: no
 
