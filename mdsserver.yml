@@ -230,6 +230,13 @@
       dest: /trees
       remote_src: no
 
+  - name: Put the pstest tree in place
+    unarchive:
+      src: tmp/pstest-trees.tgz
+      dest: /trees
+      remote_src: no
+
+
   - name: "Configure the MDSplus key (apt)"
     apt_key:
       url: "http://www.mdsplus.org/dist/mdsplus.gpg.key"
