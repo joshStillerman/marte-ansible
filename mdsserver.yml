@@ -1,6 +1,6 @@
 ---
 
-- hosts: mdsplus
+- hosts: mdsplus_server
   become: yes 
 
   tasks:
@@ -229,13 +229,18 @@
       src: tmp/bagel-trees.tgz
       dest: /trees
       remote_src: no
+      owner: mdsplus
+      group: mdsplus-data
+      mode: u=rwx,g=rwx,o=rwx
 
   - name: Put the pstest tree in place
     unarchive:
       src: tmp/pstest-trees.tgz
       dest: /trees
       remote_src: no
-
+      owner: mdsplus
+      group: mdsplus-data
+      mode: u=rwx,g=rwx,o=rwx
 
   - name: "Configure the MDSplus key (apt)"
     apt_key:
@@ -300,6 +305,21 @@
 
   - name: build the tester program
     shell: 'cd /opt/scripts; c++ tester.cpp -o tester -I/usr/local/mdsplus/include -L/usr/local/mdsplus/lib -l MdsObjectsCppShr -lev'
+
+  - name: make sure /opt/scopes exists
+    become: yes
+    file:
+      dest: "/opt/scopes"
+      owner: mdsplus
+      group: mdsplus
+      mode: u=rwx,g=rwx,o=rwx
+      state: directory
+
+  - name: Put the scope files  in place
+    unarchive:
+      src: tmp/scopes.tgz
+      dest: /opt/scopes
+      remote_src: no
 
   - name: "add the grafana gpg.key"
     apt_key:
