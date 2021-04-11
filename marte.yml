@@ -372,3 +372,17 @@
       dest: /opt/scopes
       remote_src: no
 
+  - name: enable xinetd service
+    systemd:
+      name: xinetd
+      daemon_reload: yes
+      enabled: yes
+      state: started
+      masked: no
+
+  - name: start the xinetd service
+    systemd:
+      name: xinetd
+      state: reloaded
+      masked: no
+
