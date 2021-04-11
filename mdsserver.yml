@@ -3,8 +3,13 @@
 - hosts: mdsplus_server
   become: yes 
 
-  tasks:
+  vars_prompt:
+  - name: "mdsiphost"
+    prompt: "Hostname for mdsplus server"
+    default: "mdsserver"
+    private: no
 
+  tasks:
   - name: "Create mdsplus-data"
     group:
       name: mdsplus-data
@@ -152,7 +157,7 @@
   - name: "Copy mdsplus.conf to /etc"
     become: yes
     copy:
-      src: "etc/mdsplus.conf"
+      src: "etc/remot_mdsplus.conf"
       dest: "/etc/mdsplus.conf"
       owner: root
       group: root
@@ -441,6 +446,11 @@
       enabled: yes
       state: started
       masked: no
+
+  - name: "add default_tree_path to envsyms"
+    lineinfile:
+      path: /etc/mdsplus.conf
+      line: "default_tree_path {{ mdsiphost }}::/trees/models/~t"
 
   - name: "Configure /etc/bashrc.bash"
     lineinfile:

@@ -8,18 +8,43 @@
     MARTE_DIR: /opt/MARTe2/MARTe2-MDSplus/Startup
     MDSPLUS_DIR: /usr/local/mdsplus
 
-  vars_prompt:
-  - name: "mdsiphost"
-    prompt: "Hostname for mdsplus server"
-    default: "mdsserver"
-    private: no
-
   tasks:
   - name: "Install aptitude"
     apt:
       name: "aptitude"
       state: present
       force_apt_get: yes
+
+  - name: "Create mdsplus-data"
+    group:
+      name: mdsplus-data
+
+  - name: "Create mdsplus"
+    user:
+      name: mdsplus
+      groups:
+      - mdsplus-data
+      state: present
+
+  - name: "Create jas"
+    user:
+      name: jas
+      groups:
+      - sudo
+      - mdsplus-data
+      create_home: yes
+      shell: /bin/bash
+      state: present
+
+  - name: "Create garnier"
+    user:
+      name: garnier
+      groups:
+      - mdsplus-data
+      - sudo
+      create_home: yes
+      shell: /bin/bash
+      state: present
 
   - name: Set authorized key for user  copying it from current user
     authorized_key:
@@ -54,6 +79,7 @@
       - python-setuptools 
       - python-numpy 
       - python-pip
+      - libev-dev
       - libpython3.7 
       - libpython3.7-dev 
       - libpython3.7-stdlib 
@@ -136,6 +162,20 @@
   - name: "run the mdsplus python installers"
     shell: 'cd /usr/local/mdsplus/python/MDSplus; python setup.py install; python3 setup.py install'
 
+  - name: "Copy mdsip.hosts to /etc"
+    become: yes
+    copy:
+      src: "etc/mdsip.hosts"
+      dest: "/etc/mdsip.hosts"
+
+  - name: "Enable mdsip in /etc/xinetd.d/mdsip"
+    become: yes
+    lineinfile:
+      path: /etc/xinetd.d/mdsip
+      regexp: "^(.*)disable"
+      line: "        disable         = no"
+      state: present
+
   - name: "Make sure /opt/MARTe2 exists"
     become: yes
     file:
@@ -166,6 +206,49 @@
       dest: /opt/MARTe2/MARTe2-MDSplus
       version: develop
 
+  - name: "Ensure /trees exists"
+    become: yes
+    file:
+      dest: "/trees"
+      owner: root
+      group: root
+      mode: u=rwx,g=rx,o=rwx
+      state: directory
+
+  - name: Put the sample tree in place
+    unarchive:
+      src: tmp/bagel-trees.tgz
+      dest: /trees
+      remote_src: no
+      owner: mdsplus
+      group: mdsplus-data
+      mode: u=rwx,g=rwx,o=rwx
+
+  - name: make sure the files have the correct ownership and permissions
+    file:
+      name: /trees/models/bagel
+      state: directory
+      group: mdsplus-data
+      mode: u=rwx,g=rwx,o=rwx
+
+  - name: Put the pstest tree in place
+    unarchive:
+      src: tmp/pstest-trees.tgz
+      dest: /trees
+      remote_src: no
+      owner: mdsplus
+      group: mdsplus-data
+      mode: u=rwx,g=rwx,o=rwx
+
+  - name: make sure the files have the correct ownership and permissions
+    file:
+      name: /trees/models/pstest
+      state: directory
+      owner: mdsplus
+      group: mdsplus-data
+      mode: u=rwx,g=rwx,o=rwx
+
+
   - name: "Make sure /usr/local/mdsplus/local exists"
     become: yes
     file:
@@ -177,11 +260,6 @@
     copy:
       src: "usr/local/mdsplus/local/envsyms"
       dest: "/usr/local/mdsplus/local/envsyms"
-
-  - name: "add default_tree_path to envsyms"
-    lineinfile:
-      path: /usr/local/mdsplus/local/envsyms
-      line: "default_tree_path {{ mdsiphost }}::"
 
   - name: "build MARTe2"
     make:
@@ -275,4 +353,22 @@
       mode: u=rwx,g=rx,o=rx
     with_fileglob:
       - "opt/scripts/*"
+
+  - name: build the tester program
+    shell: 'cd /opt/scripts; c++ tester.cpp -o tester -I/usr/local/mdsplus/include -L/usr/local/mdsplus/lib -l MdsObjectsCppShr -lev'
+
+  - name: make sure /opt/scopes exists
+    become: yes
+    file:
+      dest: "/opt/scopes"
+      owner: mdsplus
+      group: mdsplus
+      mode: u=rwx,g=rwx,o=rwx
+      state: directory
+
+  - name: Put the scope files  in place
+    unarchive:
+      src: tmp/scopes.tgz
+      dest: /opt/scopes
+      remote_src: no
 
