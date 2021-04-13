@@ -297,14 +297,6 @@
   - name: "Patch Python location and libraries for UB"
     shell: patch -i /tmp/ub-python3.patch /opt/MARTe2/MARTe2-MDSplus/GAMs/PyGAM/Makefile.inc
 
-#  - name: "Copy in patch-playground.patch"
-#    copy:
-#      src: "tmp/patch-playground.patch"
-#      dest: "/tmp/patch-playground.patch"
-#
-#  - name: "Patch Playground.cpp to fix compiler problem" 
-#    shell: patch -i /tmp/patch-playground.patch /opt/MARTe2/MARTe2-MDSplus/Startup/Playground.cpp
-
   - name: "Make PyGAM GAM"
     make:
       chdir: "/opt/MARTe2/MARTe2-MDSplus/GAMs/PyGAM"
@@ -335,6 +327,20 @@
       chdir: "/opt/MARTe2/MARTe2-MDSplus/GAMs/MathExpressionGAM"
       file:  "Makefile.linux" 
 
+  - name: "Copy Makefile(s) to /opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGAM"
+    become: yes
+    copy:
+      src: "{{ item }}"
+      dest: "/opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGAM/{{ item | basename }}"
+      mode: u=rwx,g=rx,o=rx
+    with_fileglob:
+      - "Makefile*"
+
+  - name: "Make rtw_capi_wrapper.so"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGam"
+      file:  "Makefile.linux"
+ 
   - name: "copy rtw_capi_wrapper.so to /usr/local/mdsplus"
     shell: "cp /opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGAM/rtw_capi_wrapper.so /usr/local/mdsplus/lib/" 
 
