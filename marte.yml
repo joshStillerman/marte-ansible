@@ -7,6 +7,7 @@
     MARTe2_Components_DIR: /opt/MARTe2/MARTe2-components
     MARTE_DIR: /opt/MARTe2/MARTe2-MDSplus/Startup
     MDSPLUS_DIR: /usr/local/mdsplus
+    MATLAB_DIR:  /opt/R2021a
 
   tasks:
   - name: "Install aptitude"
@@ -338,7 +339,7 @@
 
   - name: "Make rtw_capi_wrapper.so"
     make:
-      chdir: "/opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGam"
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGAM"
       file:  "Makefile.linux"
  
   - name: "copy rtw_capi_wrapper.so to /usr/local/mdsplus"
