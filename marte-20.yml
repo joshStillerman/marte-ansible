@@ -1,0 +1,141 @@
+---
+
+- hosts: tsn_tester
+  become: yes
+  environment:
+    MARTe2_DIR: /opt/MARTe2/MARTe2
+    MARTe2_Components_DIR: /opt/MARTe2/MARTe2-components
+    MARTE_DIR: /opt/MARTe2/MARTe2-MDSplus/Startup
+    MDSPLUS_DIR: /usr/local/mdsplus
+    MATLAB_DIR:  /opt/R2021a
+
+  tasks:
+  - name: "Install aptitude"
+    apt:
+      name: "aptitude"
+      state: present
+      force_apt_get: yes
+
+  - name: "Create mdsplus-data"
+    group:
+      name: mdsplus-data
+
+  - name: "Create mdsplus"
+    user:
+      name: mdsplus
+      groups:
+      - mdsplus-data
+      state: present
+
+  - name: "Create jas"
+    user:
+      name: jas
+      groups:
+      - sudo
+      - mdsplus-data
+      create_home: yes
+      shell: /bin/bash
+      state: present
+
+  - name: "Create garnier"
+    user:
+      name: garnier
+      groups:
+      - mdsplus-data
+      - sudo
+      create_home: yes
+      shell: /bin/bash
+      state: present
+
+  - name: Set authorized key for user  copying it from current user
+    authorized_key:
+      user: "{{ ansible_user_id }}"
+      state: present
+      key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+
+  - name: Replace after the expression till the end of the file (requires Ansible >= 2.4)
+    ansible.builtin.replace:
+      path: /etc/apt/sources.list
+      regexp: '^\# deb-src '
+      replace: ' deb-src '
+
+  - name: "Update all packages"
+    apt:
+      name: "*"
+      update_cache: yes
+      state: latest
+
+  - name: "Install software"
+    become: yes
+    apt:
+      update_cache: yes
+      name:
+      - apt-file
+      - rsync 
+      - reprepro 
+      - wget 
+      - git 
+      - automake 
+      - htop
+      - make 
+      - tar
+      - g++ 
+      - gfortran 
+      - net-tools
+      - openjdk-8-jdk
+      - libev-dev
+      - python3-dev 
+      - python3-setuptools 
+      - python3-numpy 
+      - python3-pip
+      - openssh-server
+      - gdb 
+      - gdbserver
+      - libasan6 
+      - libtsan0 
+      - valgrind
+      - libtest-harness-perl
+      - libcurl4-gnutls-dev 
+      - libreadline-dev
+      - libxml2-dev 
+      - libmotif-dev 
+      - libxt-dev 
+      - libncurses5-dev
+      - libncursesw5-dev
+      - libgtest-dev
+      - cmake
+      - curl
+      - vim
+      - gperf
+      - gnupg
+      - xinetd
+      - "linux-headers-{{ ansible_kernel }}"
+      - "linux-image-{{ ansible_kernel }}"
+      - libncurses-dev 
+      - gawk 
+      - flex 
+      - bison 
+      - openssl 
+      - libssl-dev 
+      - dkms 
+      - libelf-dev 
+      - libudev-dev 
+      - libpci-dev 
+      - libiberty-dev 
+      - autoconf
+
+  - name: "install make dependencies"
+    shell: "sudo apt-get -y build-dep linux linux-image-{{ ansible_kernel }}"
+
+  - name: make sure /opt/src exists
+    become: yes
+    file:
+      dest: "/opt/src"
+      owner: mdsplus
+      group: mdsplus
+      mode: u=rwx,g=rwx,o=rwx
+      state: directory
+
+  - name: "install the kernel sources"
+    shell: "cd /opt/src; apt-get source linux-image-unsigned-{{ ansible_kernel }}"
+
