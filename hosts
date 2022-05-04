@@ -1,9 +1,9 @@
 [all]
-marte
+marte2
 mdsserver
 
 [marte_server]
-marte
+marte2
 
 [mdsplus_server]
 mdsserver
