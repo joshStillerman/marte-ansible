@@ -1,9 +1,11 @@
 [all]
+jas-ub22
 marte2
 mdsserver
 
 [marte_server]
 marte2
+jas-ub22
 
 [mdsplus_server]
 mdsserver

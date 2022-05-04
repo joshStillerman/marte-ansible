@@ -1,0 +1,378 @@
+---
+
+- hosts: marte2 jas-ub22
+  become: yes
+  environment:
+    MARTe2_DIR: /opt/MARTe2/MARTe2
+    MARTe2_Components_DIR: /opt/MARTe2/MARTe2-components
+    MARTE_DIR: /opt/MARTe2/MARTe2-MDSplus/Startup
+    MDSPLUS_DIR: /usr/local/mdsplus
+    MATLAB_DIR:  /opt/R2021a
+
+  tasks:
+  - name: "Install aptitude"
+    apt:
+      name: "aptitude"
+      state: present
+      force_apt_get: yes
+
+  - name: "Create mdsplus-data"
+    group:
+      name: mdsplus-data
+
+  - name: "Create mdsplus"
+    user:
+      name: mdsplus
+      groups:
+      - mdsplus-data
+      state: present
+
+  - name: "Create jas"
+    user:
+      name: jas
+      groups:
+      - sudo
+      - mdsplus-data
+      create_home: yes
+      shell: /bin/bash
+      state: present
+
+  - name: "Create garnier"
+    user:
+      name: garnier
+      groups:
+      - mdsplus-data
+      - sudo
+      create_home: yes
+      shell: /bin/bash
+      state: present
+
+  - name: Set authorized key for user  copying it from current user
+    authorized_key:
+      user: "{{ ansible_user_id }}"
+      state: present
+      key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+
+  - name: "Update all packages"
+    apt:
+      name: "*"
+      state: latest
+
+  - name: "Install software"
+    become: yes
+    apt:
+      update_cache: yes
+      name:
+      - apt-file
+      - rsync 
+      - reprepro 
+      - wget 
+      - git 
+      - automake 
+      - htop
+      - make 
+      - tar
+      - g++ 
+      - gfortran 
+      - net-tools
+      - openjdk-8-jdk
+      - libev-dev
+      - libpython3-all-dev
+      - python3-distutils
+      - openssh-server
+      - gdb 
+      - gdbserver
+      - valgrind
+      - libtest-harness-perl
+      - libcurl4-gnutls-dev 
+      - libreadline-dev
+      - libxml2-dev 
+      - freetds-dev
+      - libmotif-dev 
+      - libxt-dev 
+      - libncurses5-dev
+      - libncursesw5-dev
+      - libgtest-dev
+      - cmake
+      - curl
+      - vim
+      - flex
+      - bison
+      - gperf
+      - gnupg
+      - xinetd
+
+  - name: "Configure the MDSplus key (apt)"
+    apt_key:
+      url: "http://www.mdsplus.org/dist/mdsplus.gpg.key"
+      state: present
+
+  - name: "Configure the MDSplus-alpha repository (apt)"
+    apt_repository:
+      repo: "deb [arch=amd64] http://www.mdsplus.org/dist/Ubuntu20/repo MDSplus alpha"
+      state: present
+
+  - name: "Ensure required mdsplus packages are installed (apt)"
+    apt:
+      name:
+      - mdsplus-alpha
+      - mdsplus-alpha-kernel
+      - mdsplus-alpha-kernel-bin
+      - mdsplus-alpha-rfxdevices
+      - mdsplus-alpha-motif
+      - mdsplus-alpha-motif-bin
+      - mdsplus-alpha-python
+      - mdsplus-alpha-java
+      - mdsplus-alpha-java-bin
+      - mdsplus-alpha-devel
+      state: present
+      update_cache: yes
+    register: mdsplus_install
+
+  - name: "Ensure mdsplus-* packages are up to date (apt)"
+    apt:
+      name: "mdsplus-*"
+      state: latest
+      update_cache: yes
+      only_upgrade: yes
+    register: mdsplus_update
+
+  - name: "bagelController0.so to /usr/local/mdsplus/lib"
+    become: yes
+    copy:
+      src: "usr/local/mdsplus/lib/bagelController0.so"
+      dest: "/usr/local/mdsplus/lib/bagelController0.so"
+
+  - name: "run the mdsplus python installers"
+    shell: 'cd /usr/local/mdsplus/python/MDSplus; python setup.py install; python3 setup.py install'
+
+  - name: "Copy mdsip.hosts to /etc"
+    become: yes
+    copy:
+      src: "etc/mdsip.hosts"
+      dest: "/etc/mdsip.hosts"
+
+  - name: "Enable mdsip in /etc/xinetd.d/mdsip"
+    become: yes
+    lineinfile:
+      path: /etc/xinetd.d/mdsip
+      regexp: "^(.*)disable"
+      line: "        disable         = no"
+      state: present
+
+  - name: "Make sure /opt/MARTe2 exists"
+    become: yes
+    file:
+      dest: "/opt/MARTe2"
+      state: directory
+
+  - name: Git checkout MARTe2
+    ansible.builtin.git:
+      repo: 'https://github.com/aneto0/MARTe2.git'
+      dest: /opt/MARTe2/MARTe2
+      version: develop
+
+  - name: Git checkout MARTe2-components
+    ansible.builtin.git:
+      repo: 'https://github.com/aneto0/MARTe2-components.git'
+      dest: /opt/MARTe2/MARTe2-components
+      version: develop
+
+  - name: Remove MARTe2-MDSplus since it may be patched from an old build
+    become: yes
+    file: 
+      path: /opt/MARTe2/MARTe2-MDSplus
+      state: absent
+
+  - name: Git checkout MARTe2-MDSplus
+    ansible.builtin.git:
+      repo: 'https://github.com/MDSplus/MARTe2-MDSplus.git'
+      dest: /opt/MARTe2/MARTe2-MDSplus
+      version: develop
+
+  - name: "Ensure /trees exists"
+    become: yes
+    file:
+      dest: "/trees"
+      owner: root
+      group: root
+      mode: u=rwx,g=rx,o=rwx
+      state: directory
+
+  - name: Put the sample tree in place
+    unarchive:
+      src: tmp/bagel-trees.tgz
+      dest: /trees
+      remote_src: no
+      owner: mdsplus
+      group: mdsplus-data
+      mode: u=rwx,g=rwx,o=rwx
+
+  - name: make sure the files have the correct ownership and permissions
+    file:
+      name: /trees/models/bagel
+      state: directory
+      group: mdsplus-data
+      mode: u=rwx,g=rwx,o=rwx
+
+  - name: Put the pstest tree in place
+    unarchive:
+      src: tmp/pstest-trees.tgz
+      dest: /trees
+      remote_src: no
+      owner: mdsplus
+      group: mdsplus-data
+      mode: u=rwx,g=rwx,o=rwx
+
+  - name: make sure the files have the correct ownership and permissions
+    file:
+      name: /trees/models/pstest
+      state: directory
+      owner: mdsplus
+      group: mdsplus-data
+      mode: u=rwx,g=rwx,o=rwx
+
+
+  - name: "Make sure /usr/local/mdsplus/local exists"
+    become: yes
+    file:
+      dest: "/usr/local/mdsplus/local"
+      state: directory
+
+  - name: "envsyms to /usr/local/mdsplus/local"
+    become: yes
+    copy:
+      src: "usr/local/mdsplus/local/envsyms"
+      dest: "/usr/local/mdsplus/local/envsyms"
+
+  - name: "build MARTe2"
+    make:
+      chdir: "/opt/MARTe2/MARTe2"
+      file:  "Makefile.linux"
+
+  - name: copy all the matlab includes to /opt/R2021a
+    unarchive:
+      src: tmp/MATLAB-R2021a.tgz
+      dest: /opt
+      remote_src: no
+
+  - name: "build MARTe2-components"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-components"
+      file:  "Makefile.x86-linux"
+    ignore_errors: yes
+
+  - name: "Make MDSReaderNS Gam"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/DataSources/MDSReaderNS"
+      file:  "Makefile.linux"
+
+  - name: "Make SWTrig GAM"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/DataSources/SWTrig"
+      file:  "Makefile.linux"
+
+  - name: "Make sure /tmp/ub-python3.10.patch exists"
+    become: yes
+    copy:
+      src: "tmp/ub-python3.10.patch"
+      dest: "/tmp/ub-python3.10.patch"
+
+  - name: "Patch Python location and libraries for UB"
+    shell: patch -i /tmp/ub-python3.10.patch /opt/MARTe2/MARTe2-MDSplus/GAMs/PyGAM/Makefile.inc
+
+  - name: "Make PyGAM GAM"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/GAMs/PyGAM"
+      file:  "Makefile.linux"
+
+  - name: "Make startup"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/Startup"
+      file:  "Makefile.linux"
+
+  - name: "Make StreamIn GAM"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/DataSources/StreamIn"
+      file:  "Makefile.linux"
+
+  - name: "Make StreamOut GAM"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/DataSources/StreamOut"
+      file:  "Makefile.linux"
+
+  - name: "Make MDSEventManager GAM"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/Components/MDSEventManager"
+      file:  "Makefile.linux"
+
+  - name: "Make MathExpressionGAM GAM"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/GAMs/MathExpressionGAM"
+      file:  "Makefile.linux" 
+
+  - name: "Copy Makefile(s) to /opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGAM"
+    become: yes
+    copy:
+      src: "{{ item }}"
+      dest: "/opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGAM/{{ item | basename }}"
+      mode: u=rwx,g=rx,o=rx
+    with_fileglob:
+      - "Makefile*"
+
+  - name: "Make rtw_capi_wrapper.so"
+    make:
+      chdir: "/opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGAM"
+      file:  "Makefile.linux"
+ 
+  - name: "copy rtw_capi_wrapper.so to /usr/local/mdsplus"
+    shell: "cp /opt/MARTe2/MARTe2-MDSplus/GAMs/SimulinkWrapperGAM/rtw_capi_wrapper.so /usr/local/mdsplus/lib/" 
+
+  - name: "Make sure /opt/scripts exists"
+    become: yes
+    file:
+      dest: "/opt/scripts"
+      state: directory
+      mode: u=rwx,g=rwx,o=rwx,a=rwx
+
+  - name: copy the scripts into the scripts directory
+    become: yes
+    copy:
+      src: "{{ item }}"
+      dest: "/opt/scripts/{{ item | basename }}"
+      mode: u=rwx,g=rx,o=rx
+    with_fileglob:
+      - "opt/scripts/*"
+
+  - name: build the tester program
+    shell: 'cd /opt/scripts; c++ tester.cpp -o tester -I/usr/local/mdsplus/include -L/usr/local/mdsplus/lib -l MdsObjectsCppShr -lev'
+
+  - name: make sure /opt/scopes exists
+    become: yes
+    file:
+      dest: "/opt/scopes"
+      owner: mdsplus
+      group: mdsplus
+      mode: u=rwx,g=rwx,o=rwx
+      state: directory
+
+  - name: Put the scope files  in place
+    unarchive:
+      src: tmp/scopes.tgz
+      dest: /opt/scopes
+      remote_src: no
+
+  - name: enable xinetd service
+    systemd:
+      name: xinetd
+      daemon_reload: yes
+      enabled: yes
+      state: started
+      masked: no
+
+  - name: start the xinetd service
+    systemd:
+      name: xinetd
+      state: reloaded
+      masked: no
+
