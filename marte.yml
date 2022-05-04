@@ -1,6 +1,6 @@
 ---
 
-- hosts: marte
+- hosts: marte2
   become: yes
   environment:
     MARTe2_DIR: /opt/MARTe2/MARTe2
